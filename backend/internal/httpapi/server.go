@@ -44,6 +44,8 @@ type homeworkResp struct {
 	SolvedAt       time.Time            `json:"solvedAt"`
 }
 
+var errOpenAIConfigMissing = errors.New("openai not configured: set OPENAI_API_KEY or enable ANALYZE_MOCK=true")
+
 func (s *Server) Engine() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -91,6 +93,10 @@ func (s *Server) handleAnalyze(c *gin.Context) {
 	result, err := s.analyze(c, bytes, contentType, mode)
 	if err != nil {
 		log.Printf("[ERROR] analyze: %v", err)
+		if errors.Is(err, errOpenAIConfigMissing) {
+			s.fail(c, http.StatusInternalServerError, 50007, err.Error())
+			return
+		}
 		s.fail(c, http.StatusBadGateway, 50001, "analyze failed")
 		return
 	}
@@ -144,6 +150,10 @@ func (s *Server) handleRegenerate(c *gin.Context) {
 	result, err := s.analyze(c, b, "image/jpeg", mode)
 	if err != nil {
 		log.Printf("[ERROR] regenerate analyze: %v", err)
+		if errors.Is(err, errOpenAIConfigMissing) {
+			s.fail(c, http.StatusInternalServerError, 50007, err.Error())
+			return
+		}
 		s.fail(c, http.StatusBadGateway, 50001, "analyze failed")
 		return
 	}
@@ -204,8 +214,11 @@ func (s *Server) handleHistoryDetail(c *gin.Context) {
 }
 
 func (s *Server) analyze(c *gin.Context, imageBytes []byte, contentType string, mode string) (openai.AnalyzeResult, error) {
-	if s.AnalyzeMock || s.OpenAI == nil || s.OpenAI.APIKey == "" {
+	if s.AnalyzeMock {
 		return mockResult(mode), nil
+	}
+	if s.OpenAI == nil || strings.TrimSpace(s.OpenAI.APIKey) == "" {
+		return openai.AnalyzeResult{}, errOpenAIConfigMissing
 	}
 	return s.OpenAI.AnalyzeHomework(c.Request.Context(), imageBytes, contentType, mode)
 }
