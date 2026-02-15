@@ -36,7 +36,7 @@ export default function HomePage() {
     h(View, { className: 'home-content' },
       h(View, { className: 'home-header' },
         h(Text, { className: 'h1 home-title' }, '微点辅导助手'),
-        h(Text, { className: 'sub' }, '让辅导作业变得简单轻松')
+        h(Text, { className: 'sub home-sub' }, '让辅导作业变得简单轻松')
       ),
       h(Button, { className: 'camera-btn', onClick: () => pickImage(['camera']) },
         h(Text, { className: 'camera-icon' }, '◉'),
