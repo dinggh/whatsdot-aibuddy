@@ -2,23 +2,24 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f5f0;
+  background: #f7f6f3;
 }
 
 .status-bar {
-  height: 54px;
-  padding: 14px 24px 0;
+  height: 44px;
+  padding: 10px 14px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 13px;
+  color: #161616;
+  font-weight: 500;
 }
 
 .panel {
   background: #fff;
-  border: 1px solid #e8e4de;
-  border-radius: 16px;
+  border: 1px solid #e7e4df;
+  border-radius: 14px;
   box-sizing: border-box;
 }
 
@@ -26,26 +27,36 @@
   height: 82px;
   border-top: 1px solid #e8e4de;
   background: #fff;
-  padding: 10px 0 28px;
+  padding: 8px 0 20px;
   display: flex;
 }
 
 .tab {
   flex: 1;
-  font-size: 10px;
-  color: #9c9892;
+  color: #a6a29b;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+}
+
+.tab-icon {
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.tab-label {
+  margin-top: 3px;
+  font-size: 10px;
+  line-height: 12px;
 }
 
 .tab.active {
-  color: #4a9b6e;
-  font-weight: 600;
+  color: #4aa06f;
 }
 
 .h1 {
-  font-size: 26px;
+  font-size: 40px;
   color: #2d2a26;
   font-weight: 600;
 }

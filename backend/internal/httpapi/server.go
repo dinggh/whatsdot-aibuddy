@@ -1,323 +1,371 @@
 package httpapi
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
-	"whatsdot-aibuddy/backend/internal/auth"
+	"github.com/gin-gonic/gin"
+
+	"whatsdot-aibuddy/backend/internal/openai"
 	"whatsdot-aibuddy/backend/internal/store"
-	"whatsdot-aibuddy/backend/internal/wechat"
 )
 
 type Server struct {
-	Store          *store.Store
-	JWT            *auth.JWT
-	WeChat         *wechat.Client
-	ForceDevWeChat bool
+	Store       *store.Store
+	OpenAI      *openai.Client
+	UploadDir   string
+	AnalyzeMock bool
+	Limiter     *DeviceLimiter
 }
 
-type ctxKey string
-
-const userIDKey ctxKey = "uid"
-
-func (s *Server) Routes() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", s.handleHealth)
-	mux.HandleFunc("/api/v1/auth/wechat/login", s.handleWeChatLogin)
-	mux.HandleFunc("/api/v1/auth/wechat/profile", s.withAuth(s.handleUpdateProfile))
-	mux.HandleFunc("/api/v1/auth/wechat/phone", s.withAuth(s.handleBindPhone))
-	mux.HandleFunc("/api/v1/me", s.withAuth(s.handleMe))
-	mux.HandleFunc("/api/v1/history", s.withAuth(s.handleHistory))
-	return s.requestLogger(s.withCORS(mux))
+type apiResp struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+type homeworkResp struct {
+	ID             int64                `json:"id"`
+	Mode           string               `json:"mode"`
+	SourceImage    string               `json:"sourceImageUrl"`
+	QuestionText   string               `json:"questionText"`
+	SuggestedGrade string               `json:"suggestedGrade"`
+	Result         openai.AnalyzeResult `json:"result"`
+	SolvedAt       time.Time            `json:"solvedAt"`
+}
+
+func (s *Server) Engine() *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(s.requestLogger())
+	r.Use(s.cors())
+
+	_ = os.MkdirAll(s.UploadDir, 0o755)
+	r.Static("/uploads", s.UploadDir)
+
+	r.GET("/health", func(c *gin.Context) {
+		s.success(c, gin.H{"ok": true, "time": time.Now().Format(time.RFC3339)})
+	})
+
+	api := r.Group("/api/v1")
+	api.Use(s.withRateLimit())
+	{
+		api.POST("/homework/analyze", s.handleAnalyze)
+		api.POST("/homework/:id/regenerate", s.handleRegenerate)
+		api.GET("/history", s.handleHistory)
+		api.GET("/history/:id", s.handleHistoryDetail)
+	}
+	return r
+}
+
+func (s *Server) handleAnalyze(c *gin.Context) {
+	deviceID := deviceIDFromRequest(c)
+	if deviceID == "" {
+		s.fail(c, http.StatusBadRequest, 40001, "device_id required")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "time": time.Now().Format(time.RFC3339)})
-}
 
-type loginReq struct {
-	Code string `json:"code"`
-}
-
-func (s *Server) handleWeChatLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	mode := normalizeMode(c.PostForm("mode"))
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		s.fail(c, http.StatusBadRequest, 40002, "image file required")
+		return
+	}
+	bytes, contentType, imageURL, err := s.readAndSaveUpload(fileHeader)
+	if err != nil {
+		s.fail(c, http.StatusBadRequest, 40003, err.Error())
 		return
 	}
 
-	body, _ := io.ReadAll(r.Body)
-	var req loginReq
-	_ = json.Unmarshal(body, &req)
+	result, err := s.analyze(c, bytes, contentType, mode)
+	if err != nil {
+		log.Printf("[ERROR] analyze: %v", err)
+		s.fail(c, http.StatusBadGateway, 50001, "analyze failed")
+		return
+	}
 
-	// Dev bypass: when ForceDevWeChat or credentials are placeholder, return mock session for local testing
-	if s.ForceDevWeChat || isDevWeChatCreds(s.WeChat.AppID, s.WeChat.Secret) {
-		openID := strings.TrimSpace(req.Code)
-		if openID == "" {
-			openID = "dev_local"
-		} else {
-			openID = "dev_" + openID
+	rec, err := s.Store.CreateHomework(c.Request.Context(), deviceID, mode, imageURL, result.QuestionText, result.SuggestedGrade, result)
+	if err != nil {
+		log.Printf("[ERROR] create homework: %v", err)
+		s.fail(c, http.StatusInternalServerError, 50002, "save record failed")
+		return
+	}
+
+	s.success(c, gin.H{"record": toHomeworkResp(rec)})
+}
+
+func (s *Server) handleRegenerate(c *gin.Context) {
+	deviceID := deviceIDFromRequest(c)
+	if deviceID == "" {
+		s.fail(c, http.StatusBadRequest, 40001, "device_id required")
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		s.fail(c, http.StatusBadRequest, 40004, "invalid id")
+		return
+	}
+	mode := normalizeMode(c.PostForm("mode"))
+	if mode == "guided" {
+		if jmode := normalizeMode(c.Query("mode")); jmode != "guided" {
+			mode = jmode
 		}
-		u, err := s.Store.UpsertUserByOpenID(r.Context(), openID, "")
-		if err != nil {
-			log.Printf("[ERROR] wechat login dev bypass upsert: %v", err)
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
-			return
-		}
-		tk, err := s.JWT.Sign(u.ID)
-		if err != nil {
-			log.Printf("[ERROR] wechat login dev bypass sign: %v", err)
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "token error"})
-			return
-		}
-		log.Printf("[INFO] wechat login dev bypass ok user_id=%d", u.ID)
-		writeJSON(w, http.StatusOK, map[string]any{"token": tk, "user": u})
-		return
 	}
 
-	if s.WeChat.AppID == "" || s.WeChat.Secret == "" {
-		log.Printf("[ERROR] wechat login: WECHAT_APP_ID/WECHAT_APP_SECRET not configured")
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "WECHAT_APP_ID/WECHAT_APP_SECRET not configured"})
-		return
-	}
-
-	if strings.TrimSpace(req.Code) == "" {
-		log.Printf("[WARN] wechat login: code required")
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "code required"})
-		return
-	}
-
-	sess, err := s.WeChat.Code2Session(r.Context(), strings.TrimSpace(req.Code))
+	rec, err := s.Store.GetHomeworkByIDAndDevice(c.Request.Context(), id, deviceID)
 	if err != nil {
-		log.Printf("[ERROR] wechat login code2session: %v", err)
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
-		return
-	}
-
-	u, err := s.Store.UpsertUserByOpenID(r.Context(), sess.OpenID, sess.UnionID)
-	if err != nil {
-		log.Printf("[ERROR] wechat login upsert: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
-		return
-	}
-
-	tk, err := s.JWT.Sign(u.ID)
-	if err != nil {
-		log.Printf("[ERROR] wechat login sign: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "token error"})
-		return
-	}
-	log.Printf("[INFO] wechat login ok user_id=%d openid=%s", u.ID, sess.OpenID)
-	writeJSON(w, http.StatusOK, map[string]any{"token": tk, "user": u})
-}
-
-type profileReq struct {
-	NickName  string `json:"nickName"`
-	AvatarURL string `json:"avatarUrl"`
-}
-
-func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	uid := userIDFromContext(r.Context())
-
-	var req profileReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("[WARN] update profile invalid json: %v", err)
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json"})
-		return
-	}
-
-	nick := strings.TrimSpace(req.NickName)
-	if nick == "" {
-		log.Printf("[WARN] update profile: nickName required user_id=%d", uid)
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "nickName required"})
-		return
-	}
-
-	u, err := s.Store.UpdateUserProfile(r.Context(), uid, nick, strings.TrimSpace(req.AvatarURL))
-	if err != nil {
-		log.Printf("[ERROR] update profile: %v user_id=%d", err, uid)
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": u})
-}
-
-type bindPhoneReq struct {
-	Code string `json:"code"`
-}
-
-func (s *Server) handleBindPhone(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	uid := userIDFromContext(r.Context())
-
-	var req bindPhoneReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("[WARN] bind phone invalid json: %v", err)
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json"})
-		return
-	}
-	phone, err := s.WeChat.GetPhoneNumberByCode(r.Context(), strings.TrimSpace(req.Code))
-	if err != nil {
-		log.Printf("[ERROR] bind phone get: %v user_id=%d", err, uid)
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
-		return
-	}
-
-	u, err := s.Store.UpdateUserPhone(r.Context(), uid, phone)
-	if err != nil {
-		log.Printf("[ERROR] bind phone update: %v user_id=%d", err, uid)
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": u})
-}
-
-func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	uid := userIDFromContext(r.Context())
-	u, err := s.Store.GetUserByID(r.Context(), uid)
-	if err != nil {
-		status := http.StatusInternalServerError
 		if store.IsNotFound(err) {
-			status = http.StatusNotFound
-			log.Printf("[WARN] get me: user not found user_id=%d", uid)
-		} else {
-			log.Printf("[ERROR] get me: %v user_id=%d", err, uid)
+			s.fail(c, http.StatusNotFound, 40401, "record not found")
+			return
 		}
-		writeJSON(w, status, map[string]any{"error": "user not found"})
+		log.Printf("[ERROR] get homework: %v", err)
+		s.fail(c, http.StatusInternalServerError, 50003, "query record failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": u})
-}
 
-func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	uid := userIDFromContext(r.Context())
-	items, err := s.Store.ListHistory(r.Context(), uid, 50)
+	imgPath := s.localPathFromURL(rec.SourceImage)
+	b, err := os.ReadFile(imgPath)
 	if err != nil {
-		log.Printf("[ERROR] list history: %v user_id=%d", err, uid)
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "db error"})
+		s.fail(c, http.StatusBadRequest, 40005, "image source missing")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+
+	result, err := s.analyze(c, b, "image/jpeg", mode)
+	if err != nil {
+		log.Printf("[ERROR] regenerate analyze: %v", err)
+		s.fail(c, http.StatusBadGateway, 50001, "analyze failed")
+		return
+	}
+
+	updated, err := s.Store.UpdateHomeworkResult(c.Request.Context(), id, deviceID, mode, result.QuestionText, result.SuggestedGrade, result)
+	if err != nil {
+		if store.IsNotFound(err) {
+			s.fail(c, http.StatusNotFound, 40401, "record not found")
+			return
+		}
+		log.Printf("[ERROR] update homework: %v", err)
+		s.fail(c, http.StatusInternalServerError, 50004, "update record failed")
+		return
+	}
+
+	s.success(c, gin.H{"record": toHomeworkResp(updated)})
 }
 
-func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		authz := strings.TrimSpace(r.Header.Get("Authorization"))
-		if authz == "" || !strings.HasPrefix(authz, "Bearer ") {
-			log.Printf("[WARN] auth: missing token path=%s", r.URL.Path)
-			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "missing token"})
+func (s *Server) handleHistory(c *gin.Context) {
+	deviceID := deviceIDFromRequest(c)
+	if deviceID == "" {
+		s.fail(c, http.StatusBadRequest, 40001, "device_id required")
+		return
+	}
+	items, err := s.Store.ListHistoryByDevice(c.Request.Context(), deviceID, 100)
+	if err != nil {
+		log.Printf("[ERROR] list history: %v", err)
+		s.fail(c, http.StatusInternalServerError, 50005, "query history failed")
+		return
+	}
+	s.success(c, gin.H{"items": items})
+}
+
+func (s *Server) handleHistoryDetail(c *gin.Context) {
+	deviceID := deviceIDFromRequest(c)
+	if deviceID == "" {
+		s.fail(c, http.StatusBadRequest, 40001, "device_id required")
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		s.fail(c, http.StatusBadRequest, 40004, "invalid id")
+		return
+	}
+
+	rec, err := s.Store.GetHomeworkByIDAndDevice(c.Request.Context(), id, deviceID)
+	if err != nil {
+		if store.IsNotFound(err) {
+			s.fail(c, http.StatusNotFound, 40401, "record not found")
 			return
 		}
-		token := strings.TrimSpace(strings.TrimPrefix(authz, "Bearer "))
-		claims, err := s.JWT.Parse(token)
-		if err != nil {
-			log.Printf("[WARN] auth: invalid token path=%s err=%v", r.URL.Path, err)
-			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "invalid token"})
+		log.Printf("[ERROR] history detail: %v", err)
+		s.fail(c, http.StatusInternalServerError, 50006, "query detail failed")
+		return
+	}
+
+	s.success(c, gin.H{"record": toHomeworkResp(rec)})
+}
+
+func (s *Server) analyze(c *gin.Context, imageBytes []byte, contentType string, mode string) (openai.AnalyzeResult, error) {
+	if s.AnalyzeMock || s.OpenAI == nil || s.OpenAI.APIKey == "" {
+		return mockResult(mode), nil
+	}
+	return s.OpenAI.AnalyzeHomework(c.Request.Context(), imageBytes, contentType, mode)
+}
+
+func (s *Server) readAndSaveUpload(file *multipart.FileHeader) ([]byte, string, string, error) {
+	src, err := file.Open()
+	if err != nil {
+		return nil, "", "", err
+	}
+	defer src.Close()
+
+	b, err := io.ReadAll(io.LimitReader(src, 8*1024*1024))
+	if err != nil {
+		return nil, "", "", err
+	}
+	if len(b) == 0 {
+		return nil, "", "", errors.New("empty file")
+	}
+	contentType := http.DetectContentType(b)
+	if !strings.HasPrefix(contentType, "image/") {
+		return nil, "", "", errors.New("only image is supported")
+	}
+	ext := extByContentType(contentType)
+	name := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	fullPath := filepath.Join(s.UploadDir, name)
+	if err := os.WriteFile(fullPath, b, 0o644); err != nil {
+		return nil, "", "", err
+	}
+	return b, contentType, "/uploads/" + name, nil
+}
+
+func (s *Server) localPathFromURL(imageURL string) string {
+	imageURL = strings.TrimSpace(imageURL)
+	if strings.HasPrefix(imageURL, "/uploads/") {
+		return filepath.Join(s.UploadDir, filepath.Base(imageURL))
+	}
+	return filepath.Join(s.UploadDir, filepath.Base(imageURL))
+}
+
+func (s *Server) withRateLimit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if s.Limiter == nil {
+			c.Next()
 			return
 		}
-		ctx := context.WithValue(r.Context(), userIDKey, claims.UserID)
-		next(w, r.WithContext(ctx))
+		deviceID := deviceIDFromRequest(c)
+		if deviceID == "" {
+			c.Next()
+			return
+		}
+		if !s.Limiter.Allow(deviceID) {
+			s.fail(c, http.StatusTooManyRequests, 42901, "rate limit exceeded")
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
 }
 
-type responseRecorder struct {
-	http.ResponseWriter
-	status int
-	bytes  int
-}
-
-func (r *responseRecorder) WriteHeader(code int) {
-	r.status = code
-	r.ResponseWriter.WriteHeader(code)
-}
-
-func (r *responseRecorder) Write(b []byte) (int, error) {
-	n, err := r.ResponseWriter.Write(b)
-	r.bytes += n
-	return n, err
-}
-
-func (s *Server) requestLogger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (s *Server) requestLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		start := time.Now()
-		rec := &responseRecorder{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rec, r)
-		dur := time.Since(start)
-		log.Printf("[%s] %s %s %d %d %s", r.RemoteAddr, r.Method, r.URL.Path, rec.status, rec.bytes, dur)
-		if rec.status >= 400 {
-			log.Printf("[ERROR] %s %s status=%d", r.Method, r.URL.Path, rec.status)
-		}
-	})
+		c.Next()
+		log.Printf("[%s] %s %s %d %s", c.ClientIP(), c.Request.Method, c.Request.URL.Path, c.Writer.Status(), time.Since(start))
+	}
 }
 
-func (s *Server) withCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
+func (s *Server) cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id")
+		c.Header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-func userIDFromContext(ctx context.Context) int64 {
-	v := ctx.Value(userIDKey)
-	if id, ok := v.(int64); ok {
-		return id
+		c.Next()
 	}
-	panic("missing user id in context")
 }
 
-func Recoverer(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				log.Printf("[ERROR] panic recovered: %v path=%s", rec, r.URL.Path)
-				writeJSON(w, http.StatusInternalServerError, map[string]any{"error": fmt.Sprintf("internal error: %v", rec)})
-			}
-		}()
-		next.ServeHTTP(w, r)
-	})
+func (s *Server) success(c *gin.Context, data any) {
+	c.JSON(http.StatusOK, apiResp{Code: 0, Message: "ok", Data: data})
 }
 
-var ErrBadRequest = errors.New("bad request")
+func (s *Server) fail(c *gin.Context, status int, code int, message string) {
+	c.JSON(status, apiResp{Code: code, Message: message})
+}
 
-func isDevWeChatCreds(appID, secret string) bool {
-	return appID == "" || secret == "" ||
-		strings.Contains(appID, "your_app") || strings.Contains(secret, "your_wechat") ||
-		appID == "wx_your_app_id" || secret == "your_wechat_secret"
+func deviceIDFromRequest(c *gin.Context) string {
+	deviceID := strings.TrimSpace(c.GetHeader("X-Device-Id"))
+	if deviceID == "" {
+		deviceID = strings.TrimSpace(c.Query("device_id"))
+	}
+	if len(deviceID) > 128 {
+		deviceID = deviceID[:128]
+	}
+	return deviceID
+}
+
+func extByContentType(contentType string) string {
+	switch contentType {
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	default:
+		return ".jpg"
+	}
+}
+
+func normalizeMode(mode string) string {
+	v := strings.TrimSpace(strings.ToLower(mode))
+	switch v {
+	case "guided", "detailed", "noanswer", "quick":
+		return v
+	default:
+		return "guided"
+	}
+}
+
+func toHomeworkResp(rec store.HomeworkRecord) homeworkResp {
+	var parsed openai.AnalyzeResult
+	if len(rec.ResultJSONRaw) > 0 {
+		_ = json.Unmarshal(rec.ResultJSONRaw, &parsed)
+	}
+	return homeworkResp{
+		ID:             rec.ID,
+		Mode:           rec.Mode,
+		SourceImage:    rec.SourceImage,
+		QuestionText:   rec.QuestionText,
+		SuggestedGrade: rec.Grade,
+		Result:         parsed,
+		SolvedAt:       rec.SolvedAt,
+	}
+}
+
+func mockResult(mode string) openai.AnalyzeResult {
+	prefix := "引导思考"
+	switch mode {
+	case "detailed":
+		prefix = "详细讲解"
+	case "noanswer":
+		prefix = "不给答案"
+	case "quick":
+		prefix = "快速提示"
+	}
+	return openai.AnalyzeResult{
+		QuestionText:     "24 × 15 = ?",
+		SolutionThoughts: prefix + "：把 15 拆成 10 和 5，分别与 24 相乘后相加，过程比答案更重要。",
+		ExplainToChild:   "我们先算 24×10，再算 24×5，最后把两个结果加起来。",
+		ParentGuidance: []string{
+			"你先说说为什么可以把 15 拆成 10 和 5？",
+			"如果先算 24×5，你会怎么口算？",
+			"两部分结果加起来前，先估一估答案大概是多少？",
+		},
+		ChildStuckPoints: []string{
+			"容易忘记把两部分乘积相加。",
+			"对两位数乘法拆分不熟悉。",
+		},
+		KnowledgePoints: []string{"两位数乘法", "乘法分配律", "口算与估算"},
+		SuggestedGrade:  "三年级",
+	}
 }

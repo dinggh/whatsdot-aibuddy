@@ -1,5 +1,9 @@
-.home-content { flex: 1; padding: 0 24px; display: flex; flex-direction: column; }
-.home-header { margin-top: 16px; display: flex; flex-direction: column; gap: 4px; }
-.camera-btn { margin-top: 40px; width: 200px; height: 200px; border-radius: 100px; background: #4a9b6e; color: #fff; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
-.album-btn { margin-top: 20px; height: 52px; display: flex; align-items: center; justify-content: center; color: #6d6a65; }
-.home-tip { margin-top: 24px; border-radius: 16px; background: #fff8e1; padding: 16px 20px; font-size: 13px; color: #6d6a65; }
+.home-content { flex: 1; padding: 0 14px; display: flex; flex-direction: column; }
+.home-header { margin-top: 8px; }
+.home-title { font-size: 40px; line-height: 1.2; }
+.camera-btn { margin: 38px auto 0; width: 180px; height: 180px; border-radius: 90px; background: #4ea371; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; }
+.camera-btn::after { border: none; }
+.camera-icon { font-size: 28px; line-height: 32px; }
+.camera-text { margin-top: 6px; font-size: 38px; font-weight: 600; line-height: 44px; }
+.album-btn { margin-top: 20px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #5f5c57; }
+.home-tip { margin: 28px 2px 0; border-radius: 12px; background: #f5e9c8; padding: 10px 12px; font-size: 12px; color: #6d6a65; }

@@ -18,6 +18,15 @@ type Config struct {
 	JWTExpireAfter time.Duration
 	ForceDevWeChat bool
 	LogDir         string
+	UploadDir      string
+
+	OpenAIBaseURL string
+	OpenAIAPIKey  string
+	OpenAIModel   string
+	AnalyzeMock   bool
+
+	RateLimitCapacity int
+	RateLimitRefill   int
 }
 
 func Load() Config {
@@ -33,6 +42,15 @@ func Load() Config {
 		JWTExpireAfter: time.Duration(expireHours) * time.Hour,
 		ForceDevWeChat: getEnvBool("FORCE_DEV_WECHAT", false),
 		LogDir:         getEnv("LOG_DIR", "logs"),
+		UploadDir:      getEnv("UPLOAD_DIR", "uploads"),
+
+		OpenAIBaseURL: getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		OpenAIAPIKey:  os.Getenv("OPENAI_API_KEY"),
+		OpenAIModel:   getEnv("OPENAI_MODEL", "gpt-4o-mini"),
+		AnalyzeMock:   getEnvBool("ANALYZE_MOCK", false),
+
+		RateLimitCapacity: getEnvInt("RATE_LIMIT_CAPACITY", 6),
+		RateLimitRefill:   getEnvInt("RATE_LIMIT_REFILL_PER_MIN", 6),
 	}
 	return cfg
 }

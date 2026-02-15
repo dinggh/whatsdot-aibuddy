@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,11 +30,30 @@ type User struct {
 }
 
 type HistoryItem struct {
-	ID       int64     `json:"id"`
-	Title    string    `json:"title"`
-	Grade    string    `json:"grade"`
-	ThumbURL string    `json:"thumbUrl"`
-	SolvedAt time.Time `json:"solvedAt"`
+	ID           int64     `json:"id"`
+	Title        string    `json:"title"`
+	Grade        string    `json:"grade"`
+	ThumbURL     string    `json:"thumbUrl"`
+	Summary      string    `json:"summary"`
+	Mode         string    `json:"mode"`
+	SolvedAt     time.Time `json:"solvedAt"`
+	QuestionText string    `json:"questionText"`
+}
+
+type HomeworkRecord struct {
+	ID            int64           `json:"id"`
+	DeviceID      string          `json:"deviceId"`
+	Mode          string          `json:"mode"`
+	Title         string          `json:"title"`
+	Grade         string          `json:"grade"`
+	ThumbURL      string          `json:"thumbUrl"`
+	SourceImage   string          `json:"sourceImageUrl"`
+	Summary       string          `json:"summary"`
+	QuestionText  string          `json:"questionText"`
+	ResultJSONRaw json.RawMessage `json:"result"`
+	SolvedAt      time.Time       `json:"solvedAt"`
+	CreatedAt     time.Time       `json:"createdAt"`
+	UpdatedAt     time.Time       `json:"updatedAt"`
 }
 
 func Connect(ctx context.Context, dbURL string) (*pgxpool.Pool, error) {
@@ -65,10 +87,6 @@ RETURNING id, openid, COALESCE(unionid, ''), nick_name, avatar_url, COALESCE(pho
 		&u.PhoneNumber, &u.UsedCount, &u.RemainCount, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
-		return User{}, err
-	}
-
-	if err := s.seedHistoryIfEmpty(ctx, u.ID); err != nil {
 		return User{}, err
 	}
 	return u, nil
@@ -123,15 +141,15 @@ RETURNING id, openid, COALESCE(unionid, ''), nick_name, avatar_url, COALESCE(pho
 	return u, nil
 }
 
-func (s *Store) ListHistory(ctx context.Context, userID int64, limit int) ([]HistoryItem, error) {
+func (s *Store) ListHistoryByDevice(ctx context.Context, deviceID string, limit int) ([]HistoryItem, error) {
 	const q = `
-SELECT id, title, grade, COALESCE(thumb_url, ''), solved_at
+SELECT id, title, grade, COALESCE(thumb_url, ''), COALESCE(summary, ''), mode, solved_at, COALESCE(question_text, '')
 FROM homework_records
-WHERE user_id = $1
+WHERE device_id = $1
 ORDER BY solved_at DESC
 LIMIT $2`
 
-	rows, err := s.DB.Query(ctx, q, userID, limit)
+	rows, err := s.DB.Query(ctx, q, deviceID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +158,7 @@ LIMIT $2`
 	items := make([]HistoryItem, 0, limit)
 	for rows.Next() {
 		var it HistoryItem
-		if err := rows.Scan(&it.ID, &it.Title, &it.Grade, &it.ThumbURL, &it.SolvedAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.Title, &it.Grade, &it.ThumbURL, &it.Summary, &it.Mode, &it.SolvedAt, &it.QuestionText); err != nil {
 			return nil, err
 		}
 		items = append(items, it)
@@ -148,24 +166,121 @@ LIMIT $2`
 	return items, rows.Err()
 }
 
-func (s *Store) seedHistoryIfEmpty(ctx context.Context, userID int64) error {
-	const countQ = `SELECT COUNT(1) FROM homework_records WHERE user_id = $1`
-	var n int
-	if err := s.DB.QueryRow(ctx, countQ, userID).Scan(&n); err != nil {
-		return err
-	}
-	if n > 0 {
-		return nil
-	}
+func (s *Store) GetHomeworkByIDAndDevice(ctx context.Context, id int64, deviceID string) (HomeworkRecord, error) {
+	const q = `
+SELECT id, device_id, mode, title, grade, COALESCE(thumb_url, ''), COALESCE(source_image_url, ''), COALESCE(summary, ''), COALESCE(question_text, ''), result_json, solved_at, created_at, updated_at
+FROM homework_records
+WHERE id = $1 AND device_id = $2`
 
-	const insertQ = `
-INSERT INTO homework_records (user_id, title, grade, thumb_url, solved_at)
-VALUES
-($1, '24 x 15 = ?', '三年级', '/images/generated-1771139016204.png', now() - interval '15 minutes'),
-($1, '阅读理解：小蝌蚪找妈妈', '四年级', '/images/generated-1771138856711.png', now() - interval '90 minutes'),
-($1, '长方形面积计算', '三年级', '/images/generated-1771138893602.png', now() - interval '1 day')`
-	_, err := s.DB.Exec(ctx, insertQ, userID)
-	return err
+	var rec HomeworkRecord
+	err := s.DB.QueryRow(ctx, q, id, deviceID).Scan(
+		&rec.ID, &rec.DeviceID, &rec.Mode, &rec.Title, &rec.Grade, &rec.ThumbURL, &rec.SourceImage,
+		&rec.Summary, &rec.QuestionText, &rec.ResultJSONRaw, &rec.SolvedAt, &rec.CreatedAt, &rec.UpdatedAt,
+	)
+	if err != nil {
+		return HomeworkRecord{}, err
+	}
+	return rec, nil
+}
+
+func (s *Store) CreateHomework(ctx context.Context, deviceID string, mode string, imageURL string, questionText string, grade string, resultJSON any) (HomeworkRecord, error) {
+	resultBytes, err := json.Marshal(resultJSON)
+	if err != nil {
+		return HomeworkRecord{}, err
+	}
+	title := buildTitle(questionText)
+	summary := buildSummary(questionText)
+
+	const q = `
+INSERT INTO homework_records (device_id, mode, title, grade, thumb_url, source_image_url, summary, question_text, result_json, solved_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
+RETURNING id, device_id, mode, title, grade, COALESCE(thumb_url, ''), COALESCE(source_image_url, ''), COALESCE(summary, ''), COALESCE(question_text, ''), result_json, solved_at, created_at, updated_at`
+
+	var rec HomeworkRecord
+	err = s.DB.QueryRow(ctx, q, deviceID, mode, title, grade, imageURL, imageURL, summary, questionText, resultBytes).Scan(
+		&rec.ID, &rec.DeviceID, &rec.Mode, &rec.Title, &rec.Grade, &rec.ThumbURL, &rec.SourceImage,
+		&rec.Summary, &rec.QuestionText, &rec.ResultJSONRaw, &rec.SolvedAt, &rec.CreatedAt, &rec.UpdatedAt,
+	)
+	if err != nil {
+		return HomeworkRecord{}, err
+	}
+	return rec, nil
+}
+
+func (s *Store) UpdateHomeworkResult(ctx context.Context, id int64, deviceID string, mode string, questionText string, grade string, resultJSON any) (HomeworkRecord, error) {
+	resultBytes, err := json.Marshal(resultJSON)
+	if err != nil {
+		return HomeworkRecord{}, err
+	}
+	title := buildTitle(questionText)
+	summary := buildSummary(questionText)
+
+	const q = `
+UPDATE homework_records
+SET mode=$3, title=$4, grade=$5, summary=$6, question_text=$7, result_json=$8, solved_at=now(), updated_at=now()
+WHERE id = $1 AND device_id = $2
+RETURNING id, device_id, mode, title, grade, COALESCE(thumb_url, ''), COALESCE(source_image_url, ''), COALESCE(summary, ''), COALESCE(question_text, ''), result_json, solved_at, created_at, updated_at`
+
+	var rec HomeworkRecord
+	err = s.DB.QueryRow(ctx, q, id, deviceID, mode, title, grade, summary, questionText, resultBytes).Scan(
+		&rec.ID, &rec.DeviceID, &rec.Mode, &rec.Title, &rec.Grade, &rec.ThumbURL, &rec.SourceImage,
+		&rec.Summary, &rec.QuestionText, &rec.ResultJSONRaw, &rec.SolvedAt, &rec.CreatedAt, &rec.UpdatedAt,
+	)
+	if err != nil {
+		return HomeworkRecord{}, err
+	}
+	return rec, nil
+}
+
+func buildTitle(questionText string) string {
+	v := strings.TrimSpace(questionText)
+	if v == "" {
+		return "未识别题目"
+	}
+	if len([]rune(v)) <= 24 {
+		return v
+	}
+	rs := []rune(v)
+	return string(rs[:24]) + "..."
+}
+
+func buildSummary(questionText string) string {
+	v := strings.TrimSpace(strings.ReplaceAll(questionText, "\n", " "))
+	if v == "" {
+		return "暂无题干摘要"
+	}
+	rs := []rune(v)
+	if len(rs) <= 50 {
+		return v
+	}
+	return string(rs[:50]) + "..."
+}
+
+func (s *Store) ListHistory(ctx context.Context, userID int64, limit int) ([]HistoryItem, error) {
+	// Backward compatibility for old API; user_id history no longer used in mini-program flow.
+	const q = `
+SELECT id, title, grade, COALESCE(thumb_url, ''), COALESCE(summary, ''), mode, solved_at, COALESCE(question_text, '')
+FROM homework_records
+WHERE user_id = $1
+ORDER BY solved_at DESC
+LIMIT $2`
+	rows, err := s.DB.Query(ctx, q, userID, limit)
+	if err != nil {
+		if strings.Contains(err.Error(), "column \"user_id\" does not exist") {
+			return []HistoryItem{}, nil
+		}
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]HistoryItem, 0, limit)
+	for rows.Next() {
+		var it HistoryItem
+		if err := rows.Scan(&it.ID, &it.Title, &it.Grade, &it.ThumbURL, &it.Summary, &it.Mode, &it.SolvedAt, &it.QuestionText); err != nil {
+			return nil, err
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
 }
 
 func nullable(s string) any {
@@ -177,4 +292,11 @@ func nullable(s string) any {
 
 func IsNotFound(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
+}
+
+func WrapNotFound(entity string, err error) error {
+	if IsNotFound(err) {
+		return fmt.Errorf("%s not found: %w", entity, err)
+	}
+	return err
 }

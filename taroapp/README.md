@@ -1,14 +1,13 @@
-# Taro 统一工程（React 一套代码：H5 + 微信小程序）
+# Taro 小程序端
 
 目录：`/Users/dinggh/projects/whatsdot-aibuddy/taroapp`
 
-## 已实现页面
-- `src/pages/home`
-- `src/pages/loading`
-- `src/pages/result`
-- `src/pages/mode`
-- `src/pages/history`
-- `src/pages/profile`
+## 页面
+- `Home`：拍作业/从相册上传
+- `Loading`：上传与分析中
+- `Result`：题目+三段结构+模式切换+再生成
+- `History`：历史列表，点击查看详情
+- `Profile`：占位页
 
 ## 安装依赖
 ```bash
@@ -16,29 +15,22 @@ cd /Users/dinggh/projects/whatsdot-aibuddy/taroapp
 npm install
 ```
 
-## 启动 H5（本地网页）
-```bash
-npm run dev:h5
-```
-默认会启动/监听 H5 构建（端口参数已固定为 `10087`），按终端提示访问本地地址。
-
 ## 启动微信小程序构建
 ```bash
 npm run dev:weapp
 ```
-构建输出目录：`/Users/dinggh/projects/whatsdot-aibuddy/taroapp/dist`
+构建输出：`/Users/dinggh/projects/whatsdot-aibuddy/taroapp/dist`
 
-## 微信开发者工具测试
-1. 打开微信开发者工具
-2. 导入项目目录：`/Users/dinggh/projects/whatsdot-aibuddy/taroapp/dist`
-3. AppID 选择测试号（或你自己的小程序 AppID）
-4. 编译后即可调试 6 个页面
-
-## 常用构建
+## 构建
 ```bash
-npm run build:h5
 npm run build:weapp
 ```
 
-## 注意
-- 脚本已默认加 `--no-check`，用于绕过 Taro `doctor` 在部分 Node/macOS 组合下的启动崩溃。
+## 微信开发者工具联调
+1. 导入目录：`/Users/dinggh/projects/whatsdot-aibuddy/taroapp/dist`
+2. 打开“不校验合法域名/HTTPS”用于本地调试
+3. 确保后端运行在 `http://127.0.0.1:8080`
+
+## API 基地址
+- 通过 `process.env.TARO_APP_API_BASE` 注入
+- 默认值：`http://127.0.0.1:8080`

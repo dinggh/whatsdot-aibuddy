@@ -1,11 +1,14 @@
-.mode-mask { min-height: 100vh; background: rgba(0,0,0,.38); display: flex; align-items: flex-end; }
-.mode-sheet { width: 100%; border-radius: 24px 24px 0 0; background: #fff; padding: 24px 20px 36px; box-sizing: border-box; }
-.mode-handle { width: 40px; height: 4px; border-radius: 2px; background: #e8e4de; margin: 0 auto 16px; }
-.mode-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.mode-title { font-size: 20px; font-weight: 600; color: #2d2a26; }
-.mode-close { width: 32px; height: 32px; border-radius: 16px; background: #f8f5f0; text-align: center; line-height: 32px; color: #6d6a65; }
-.mode-item { margin-top: 10px; border: 1px solid #e8e4de; border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; }
-.mode-item.active { border-width: 2px; border-color: #4a9b6e; background: #e8f5ed; }
-.mode-item-title { display: block; font-size: 15px; color: #2d2a26; }
-.mode-item-desc { display: block; margin-top: 2px; font-size: 12px; color: #6d6a65; }
-.mode-check { color: #4a9b6e; font-size: 20px; }
+.mode-mask { min-height: 100vh; background: rgba(0, 0, 0, 0.7); display: flex; align-items: flex-end; }
+.mode-sheet { width: 100%; border-radius: 16px 16px 0 0; background: #f6f6f6; padding: 10px 10px 20px; box-sizing: border-box; }
+.mode-handle { width: 34px; height: 3px; border-radius: 2px; background: #d6d2cc; margin: 0 auto 10px; }
+.mode-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px; }
+.mode-title { font-size: 18px; font-weight: 600; color: #222; }
+.mode-close { width: 24px; height: 24px; border-radius: 12px; background: #ece8e1; text-align: center; line-height: 24px; color: #8a857d; }
+.mode-item { margin-top: 8px; border: 1px solid #e6e2db; border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: space-between; background: #f8f7f4; }
+.mode-item.active { border-width: 2px; border-color: #49a06f; background: #e9f4ec; }
+.mode-left { display: flex; align-items: center; gap: 10px; }
+.mode-icon { width: 20px; height: 20px; border-radius: 10px; background: #e5ece4; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.mode-item-title { display: block; font-size: 15px; color: #242424; font-weight: 600; }
+.mode-item-desc { display: block; margin-top: 3px; font-size: 11px; color: #7a7670; }
+.mode-check { color: #49a06f; font-size: 18px; }
+.mode-check-empty { color: #cdc8c0; }
