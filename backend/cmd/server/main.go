@@ -12,14 +12,21 @@ import (
 	"whatsdot-aibuddy/backend/internal/auth"
 	"whatsdot-aibuddy/backend/internal/config"
 	"whatsdot-aibuddy/backend/internal/httpapi"
+	"whatsdot-aibuddy/backend/internal/logger"
 	"whatsdot-aibuddy/backend/internal/store"
 	"whatsdot-aibuddy/backend/internal/wechat"
 )
 
 func main() {
 	cfg := config.Load()
-	ctx := context.Background()
 
+	closer, err := logger.Init(cfg.LogDir)
+	if err != nil {
+		log.Fatalf("init logger: %v", err)
+	}
+	defer closer.Close()
+
+	ctx := context.Background()
 	db, err := store.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("connect db failed: %v", err)
@@ -27,9 +34,10 @@ func main() {
 	defer db.Close()
 
 	svc := &httpapi.Server{
-		Store:  &store.Store{DB: db},
-		JWT:    auth.New(cfg.JWTSecret, cfg.JWTExpireAfter),
-		WeChat: wechat.New(cfg.WeChatAppID, cfg.WeChatSecret, cfg.WeChatAPIBase),
+		Store:          &store.Store{DB: db},
+		JWT:            auth.New(cfg.JWTSecret, cfg.JWTExpireAfter),
+		WeChat:         wechat.New(cfg.WeChatAppID, cfg.WeChatSecret, cfg.WeChatAPIBase),
+		ForceDevWeChat: cfg.ForceDevWeChat,
 	}
 
 	h := httpapi.Recoverer(svc.Routes())

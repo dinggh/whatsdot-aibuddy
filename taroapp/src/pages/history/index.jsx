@@ -65,9 +65,11 @@ export default function HistoryPage() {
       h(Text, { className: 'history-search' }, '⌕')
     ),
     h(ScrollView, { className: 'history-list', scrollY: true },
-      loading ? h(Text, { className: 'history-date' }, '加载中...') : null,
-      items.map((item) => h(Item, { key: item.id, src: item.src, title: item.title, sub: item.sub })),
-      !loading && items.length === 0 ? h(Text, { className: 'history-date' }, '暂无记录') : null
+      h(View, { className: 'history-list-inner' },
+        loading ? h(Text, { className: 'history-date' }, '加载中...') : null,
+        items.map((item) => h(Item, { key: item.id, src: item.src, title: item.title, sub: item.sub })),
+        !loading && items.length === 0 ? h(Text, { className: 'history-date' }, '暂无记录') : null
+      )
     ),
     h(BottomTabBar, { active: 'history' })
   )

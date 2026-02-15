@@ -16,6 +16,8 @@ type Config struct {
 	WeChatAPIBase  string
 	JWTSecret      string
 	JWTExpireAfter time.Duration
+	ForceDevWeChat bool
+	LogDir         string
 }
 
 func Load() Config {
@@ -29,6 +31,8 @@ func Load() Config {
 		WeChatAPIBase:  getEnv("WECHAT_API_BASE", "https://api.weixin.qq.com"),
 		JWTSecret:      getEnv("JWT_SECRET", "change-this-jwt-secret"),
 		JWTExpireAfter: time.Duration(expireHours) * time.Hour,
+		ForceDevWeChat: getEnvBool("FORCE_DEV_WECHAT", false),
+		LogDir:         getEnv("LOG_DIR", "logs"),
 	}
 	return cfg
 }
@@ -38,6 +42,14 @@ func getEnv(key, defaultVal string) string {
 		return v
 	}
 	return defaultVal
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	return strings.EqualFold(v, "true") || v == "1"
 }
 
 func getEnvInt(key string, defaultVal int) int {

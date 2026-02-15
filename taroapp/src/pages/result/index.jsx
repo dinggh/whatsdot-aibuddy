@@ -25,14 +25,16 @@ export default function ResultPage() {
       h(View, { className: 'result-mode', onClick: () => Taro.navigateTo({ url: '/pages/mode/index' }) }, '引导思考')
     ),
     h(ScrollView, { className: 'result-content', scrollY: true },
-      h(View, { className: 'panel result-card' },
-        h(Text, { className: 'result-card-title' }, '题目 · 三年级'),
-        h(Image, { className: 'result-qimg', mode: 'aspectFill', src: qimg }),
-        h(Text, { className: 'result-qtext' }, '24 x 15 = ?')
-      ),
-      Card('解题思路（给家长看）', '这道题考查的是两位数乘法。可用竖式计算：1) 24x5=120；2) 24x10=240；3) 相加=360。'),
-      Card('讲给孩子听（语气简单）', '把 15 拆成 10 和 5，再分别和 24 相乘，最后把结果加起来。'),
-      Card('家长可以这样引导（重点）', '先问怎么拆 15，再引导算 24x5 和 24x10，最后让孩子自己说答案。', 'panel result-card result-strong')
+      h(View, { className: 'result-content-inner' },
+        h(View, { className: 'panel result-card' },
+          h(Text, { className: 'result-card-title' }, '题目 · 三年级'),
+          h(Image, { className: 'result-qimg', mode: 'aspectFill', src: qimg }),
+          h(Text, { className: 'result-qtext' }, '24 x 15 = ?')
+        ),
+        Card('解题思路（给家长看）', '这道题考查的是两位数乘法。可用竖式计算：1) 24x5=120；2) 24x10=240；3) 相加=360。'),
+        Card('讲给孩子听（语气简单）', '把 15 拆成 10 和 5，再分别和 24 相乘，最后把结果加起来。'),
+        Card('家长可以这样引导（重点）', '先问怎么拆 15，再引导算 24x5 和 24x10，最后让孩子自己说答案。', 'panel result-card result-strong')
+      )
     ),
     h(View, { className: 'result-actions' },
       h(Button, { className: 'result-btn result-btn-primary', onClick: () => Taro.navigateTo({ url: '/pages/history/index' }) }, '保存'),

@@ -1,7 +1,8 @@
 .history-header { height: 52px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
 .history-h1 { color: #2d2a26; font-size: 22px; font-weight: 600; }
 .history-search { width: 36px; height: 36px; border-radius: 18px; border: 1px solid #e8e4de; background: #fff; text-align: center; line-height: 36px; color: #6d6a65; }
-.history-list { flex: 1; padding: 8px 16px; box-sizing: border-box; }
+.history-list { flex: 1; }
+.history-list-inner { padding: 8px 16px; box-sizing: border-box; }
 .history-date { display: block; margin: 6px 0; color: #9c9892; font-size: 13px; }
 .history-item { margin-bottom: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; }
 .history-thumb { width: 56px; height: 56px; border-radius: 10px; }
