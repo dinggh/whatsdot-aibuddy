@@ -1,0 +1,31 @@
+<view class="screen">
+  <view class="status-bar"><text>9:41</text><text>⋯</text></view>
+
+  <view class="content">
+    <view class="user">
+      <view class="avatar">👤</view>
+      <view><text class="name">张妈妈</text><text class="child">小明 · 三年级</text></view>
+    </view>
+
+    <view class="stats">
+      <view class="panel stat"><text class="num g">47</text><text class="label">已用题量</text></view>
+      <view class="panel stat"><text class="num o">53</text><text class="label">剩余次数</text></view>
+    </view>
+
+    <view class="buy"><text class="buy-title">购买题包</text><text class="buy-sub">100次 / 月 · 限时优惠</text></view>
+
+    <view class="panel menu">
+      <view class="menu-item"><text>家长成长指南</text><text>›</text></view>
+      <view class="menu-item"><text>辅导设置</text><text>›</text></view>
+      <view class="menu-item"><text>意见反馈</text><text>›</text></view>
+      <view class="menu-item"><text>关于我们</text><text>›</text></view>
+    </view>
+  </view>
+
+  <view class="tabbar">
+    <view class="tab" bindtap="goHome"><text>首页</text></view>
+    <view class="tab" bindtap="goHistory"><text>历史记录</text></view>
+    <view class="tab"><text>家长课堂</text></view>
+    <view class="tab active"><text>我的</text></view>
+  </view>
+</view>

@@ -1,0 +1,11 @@
+.mode-mask { min-height: 100vh; background: rgba(0,0,0,.38); display: flex; align-items: flex-end; }
+.mode-sheet { width: 100%; border-radius: 24px 24px 0 0; background: #fff; padding: 24px 20px 36px; box-sizing: border-box; }
+.mode-handle { width: 40px; height: 4px; border-radius: 2px; background: #e8e4de; margin: 0 auto 16px; }
+.mode-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.mode-title { font-size: 20px; font-weight: 600; color: #2d2a26; }
+.mode-close { width: 32px; height: 32px; border-radius: 16px; background: #f8f5f0; text-align: center; line-height: 32px; color: #6d6a65; }
+.mode-item { margin-top: 10px; border: 1px solid #e8e4de; border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; }
+.mode-item.active { border-width: 2px; border-color: #4a9b6e; background: #e8f5ed; }
+.mode-item-title { display: block; font-size: 15px; color: #2d2a26; }
+.mode-item-desc { display: block; margin-top: 2px; font-size: 12px; color: #6d6a65; }
+.mode-check { color: #4a9b6e; font-size: 20px; }

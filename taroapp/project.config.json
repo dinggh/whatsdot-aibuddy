@@ -1,0 +1,13 @@
+{
+  "appid": "touristappid",
+  "projectname": "whatsdot-aibuddy-taro",
+  "compileType": "miniprogram",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false
+  },
+  "libVersion": "3.4.0"
+}

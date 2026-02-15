@@ -1,0 +1,19 @@
+<view class="screen">
+  <view class="status-bar">
+    <text>9:41</text>
+    <text>⋯</text>
+  </view>
+
+  <view class="nav-back" bindtap="goBack">←</view>
+
+  <view class="loading-wrap">
+    <image class="preview" src="/images/generated-1771138856711.png" mode="aspectFill" />
+    <view class="ring">✶</view>
+    <text class="loading-title">正在识别题目...</text>
+    <text class="loading-sub">AI正在整理讲解方式...</text>
+    <view class="tip">
+      <text class="tip-text">小贴士：引导孩子自己思考比直接告诉答案更有效哦</text>
+    </view>
+    <button class="next" bindtap="goResult">查看结果</button>
+  </view>
+</view>

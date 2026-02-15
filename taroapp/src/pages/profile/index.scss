@@ -1,0 +1,17 @@
+.profile-content { flex: 1; padding: 0 20px; display: flex; flex-direction: column; gap: 16px; }
+.profile-user { margin-top: 16px; display: flex; align-items: center; gap: 14px; }
+.profile-avatar { width: 56px; height: 56px; border-radius: 28px; background: #e8f5ed; color: #4a9b6e; text-align: center; line-height: 56px; }
+.profile-name { display: block; color: #2d2a26; font-size: 20px; font-weight: 600; }
+.profile-child { display: block; margin-top: 4px; color: #6d6a65; font-size: 14px; }
+.profile-stats { display: flex; gap: 12px; }
+.profile-stat { flex: 1; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.profile-num { font-size: 28px; font-weight: 700; }
+.profile-num.green { color: #4a9b6e; }
+.profile-num.orange { color: #e8a87c; }
+.profile-label { font-size: 12px; color: #6d6a65; }
+.profile-buy { border-radius: 16px; padding: 16px 18px; background: linear-gradient(90deg, #4a9b6e, #3a7d58); }
+.profile-buy-title { display: block; color: #fff; font-size: 16px; font-weight: 600; }
+.profile-buy-sub { display: block; margin-top: 2px; color: rgba(255,255,255,.75); font-size: 12px; }
+.profile-menu { overflow: hidden; }
+.profile-menu-item { height: 52px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0ede8; color: #2d2a26; font-size: 15px; }
+.profile-menu-item:last-child { border-bottom: 0; }

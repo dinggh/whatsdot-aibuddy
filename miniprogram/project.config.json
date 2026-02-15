@@ -1,0 +1,16 @@
+{
+  "appid": "touristappid",
+  "projectname": "whatsdot-aibuddy-mini",
+  "compileType": "miniprogram",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true
+  },
+  "libVersion": "3.4.0",
+  "condition": {}
+}

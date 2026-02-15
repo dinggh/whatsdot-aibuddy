@@ -1,0 +1,56 @@
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8f5f0;
+}
+
+.status-bar {
+  height: 54px;
+  padding: 14px 24px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e8e4de;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.tabbar {
+  height: 82px;
+  border-top: 1px solid #e8e4de;
+  background: #fff;
+  padding: 10px 0 28px;
+  display: flex;
+}
+
+.tab {
+  flex: 1;
+  font-size: 10px;
+  color: #9c9892;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tab.active {
+  color: #4a9b6e;
+  font-weight: 600;
+}
+
+.h1 {
+  font-size: 26px;
+  color: #2d2a26;
+  font-weight: 600;
+}
+
+.sub {
+  font-size: 14px;
+  color: #6d6a65;
+}

@@ -1,0 +1,20 @@
+.content { flex: 1; padding: 0 20px; display: flex; flex-direction: column; gap: 16px; }
+.user { margin-top: 16px; display: flex; align-items: center; gap: 14px; }
+.avatar { width: 56px; height: 56px; border-radius: 28px; background: #e8f5ed; color: #4a9b6e; text-align: center; line-height: 56px; }
+.name { display: block; font-size: 20px; font-weight: 600; color: #2d2a26; }
+.child { display: block; margin-top: 4px; font-size: 14px; color: #6d6a65; }
+.stats { display: flex; gap: 12px; }
+.stat { flex: 1; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.num { font-size: 28px; font-weight: 700; }
+.g { color: #4a9b6e; }
+.o { color: #e8a87c; }
+.label { font-size: 12px; color: #6d6a65; }
+.buy { border-radius: 16px; padding: 16px 18px; background: linear-gradient(90deg, #4a9b6e, #3a7d58); color: #fff; }
+.buy-title { display: block; font-size: 16px; font-weight: 600; }
+.buy-sub { display: block; margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.75); }
+.menu { overflow: hidden; }
+.menu-item { height: 52px; padding: 0 18px; border-bottom: 1px solid #f0ede8; display: flex; align-items: center; justify-content: space-between; color: #2d2a26; font-size: 15px; }
+.menu-item:last-child { border-bottom: 0; }
+.tabbar { height: 82px; background: #fff; border-top: 1px solid #e8e4de; padding: 10px 0 28px; display: flex; }
+.tab { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #9c9892; }
+.tab.active { color: #4a9b6e; font-weight: 600; }

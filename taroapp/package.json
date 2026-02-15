@@ -1,0 +1,35 @@
+{
+  "name": "whatsdot-aibuddy-taro",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:h5": "taro build --type h5 --watch --no-check -p 10087",
+    "dev:weapp": "taro build --type weapp --watch --no-check",
+    "build:h5": "taro build --type h5 --no-check",
+    "build:weapp": "taro build --type weapp --no-check"
+  },
+  "dependencies": {
+    "@tarojs/components": "^4.0.7",
+    "@tarojs/react": "^4.1.11",
+    "@tarojs/runtime": "^4.0.7",
+    "@tarojs/shared": "^4.0.7",
+    "@tarojs/taro": "^4.0.7",
+    "@tarojs/webpack5-runner": "^4.1.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
+    "@tarojs/cli": "^4.0.7",
+    "@tarojs/plugin-framework-react": "^4.0.7",
+    "@tarojs/plugin-platform-h5": "^4.0.7",
+    "@tarojs/plugin-platform-weapp": "^4.0.7",
+    "@types/react": "^18.2.56",
+    "@types/react-dom": "^18.2.19",
+    "react-refresh": "^0.14.2",
+    "typescript": "^5.6.3",
+    "webpack": "^5.95.0",
+    "webpack-dev-server": "^4.15.2"
+  },
+  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
+}

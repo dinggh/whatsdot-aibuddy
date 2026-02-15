@@ -1,0 +1,21 @@
+<view class="mask">
+  <view class="sheet">
+    <view class="handle"></view>
+    <view class="header">
+      <text class="title">选择讲解模式</text>
+      <text class="close" bindtap="close">×</text>
+    </view>
+
+    <view class="opt active">
+      <view>
+        <text class="opt-title">引导思考</text>
+        <text class="opt-desc">引导孩子一步一步思考（默认推荐）</text>
+      </view>
+      <text class="check">✓</text>
+    </view>
+
+    <view class="opt"><view><text class="opt-title">详细讲解</text><text class="opt-desc">完整讲解解题过程和知识点</text></view></view>
+    <view class="opt"><view><text class="opt-title">不给答案模式</text><text class="opt-desc">只给思路和提示，不出现答案</text></view></view>
+    <view class="opt"><view><text class="opt-title">快速提示</text><text class="opt-desc">快速给出关键提示，节省时间</text></view></view>
+  </view>
+</view>

@@ -1,0 +1,17 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/loading/loading",
+    "pages/result/result",
+    "pages/mode/mode",
+    "pages/history/history",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#F8F5F0",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,41 @@
+<view class="screen">
+  <view class="status-bar">
+    <text>9:41</text>
+    <text>⋯</text>
+  </view>
+
+  <view class="topbar">
+    <text class="back" bindtap="goBack">←</text>
+    <text class="title">讲解结果</text>
+    <view class="mode" bindtap="goMode"><text>引导思考</text></view>
+  </view>
+
+  <scroll-view class="content" scroll-y="true">
+    <view class="panel card">
+      <text class="card-title">题目 · 三年级</text>
+      <image class="qimg" src="/images/generated-1771138893602.png" mode="aspectFill" />
+      <text class="qtext">24 x 15 = ?</text>
+    </view>
+
+    <view class="panel card">
+      <text class="h">解题思路（给家长看）</text>
+      <text class="p">这道题考查的是两位数乘法。可以用竖式计算法：\n1. 先算 24 x 5 = 120\n2. 再算 24 x 10 = 240\n3. 最后把两个结果相加：120 + 240 = 360</text>
+    </view>
+
+    <view class="panel card">
+      <text class="h">讲给孩子听（语气简单）</text>
+      <text class="p">宝贝，我们可以把 15 拆成 10 和 5，再分别和 24 相乘，最后相加。</text>
+    </view>
+
+    <view class="panel card strong">
+      <text class="h">家长可以这样引导（重点）</text>
+      <text class="p dark">先问孩子怎么拆 15，再引导算 24x5 和 24x10，最后自己得出答案。</text>
+    </view>
+  </scroll-view>
+
+  <view class="actions">
+    <button class="btn primary" bindtap="goHistory">保存</button>
+    <button class="btn">分享</button>
+    <button class="btn">复制</button>
+  </view>
+</view>
