@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.js
+
+# Build / output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# Logs and debug
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Testing and coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Misc
+.cache/
+.temp/
+tmp/
+temp/
+*.bak
+*.orig
+
+# Optional: uncomment if you use Python in this repo
+# __pycache__/
+# .venv/
+# venv/
+# *.pyc
