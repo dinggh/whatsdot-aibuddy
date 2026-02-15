@@ -1,8 +1,10 @@
 .content { flex: 1; padding: 0 20px; display: flex; flex-direction: column; gap: 16px; }
 .user { margin-top: 16px; display: flex; align-items: center; gap: 14px; }
-.avatar { width: 56px; height: 56px; border-radius: 28px; background: #e8f5ed; color: #4a9b6e; text-align: center; line-height: 56px; }
+.avatar { width: 56px; height: 56px; border-radius: 28px; overflow: hidden; background: #e8f5ed; color: #4a9b6e; text-align: center; line-height: 56px; }
 .name { display: block; font-size: 20px; font-weight: 600; color: #2d2a26; }
 .child { display: block; margin-top: 4px; font-size: 14px; color: #6d6a65; }
+.actions { display: flex; gap: 10px; }
+.auth-btn { flex: 1; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #2d2a26; }
 .stats { display: flex; gap: 12px; }
 .stat { flex: 1; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .num { font-size: 28px; font-weight: 700; }

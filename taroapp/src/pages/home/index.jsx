@@ -1,14 +1,21 @@
 import React from 'react'
 import { View, Text, Button } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 
 import { BottomTabBar, StatusBar } from '@/components/layout'
+import { ensureLogin } from '@/services/api'
 import '@/styles/common.scss'
 import './index.scss'
 
 const h = React.createElement
 
 export default function HomePage() {
+  useDidShow(() => {
+    ensureLogin().catch((err) => {
+      Taro.showToast({ title: err.message || '登录失败', icon: 'none' })
+    })
+  })
+
   return h(View, { className: 'screen' },
     h(StatusBar),
     h(View, { className: 'home-content' },

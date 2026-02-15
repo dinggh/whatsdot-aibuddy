@@ -3,13 +3,22 @@
 
   <view class="content">
     <view class="user">
-      <view class="avatar">👤</view>
-      <view><text class="name">张妈妈</text><text class="child">小明 · 三年级</text></view>
+      <image wx:if="{{user.avatarUrl}}" src="{{user.avatarUrl}}" class="avatar" mode="aspectFill" />
+      <view wx:else class="avatar">👤</view>
+      <view>
+        <text class="name">{{user.nickName}}</text>
+        <text class="child">{{user.phoneNumber ? ('手机号：' + user.phoneNumber) : '未绑定手机号'}}</text>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="auth-btn panel" bindtap="onTapSyncProfile">同步昵称头像</button>
+      <button class="auth-btn panel" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber">绑定手机号</button>
     </view>
 
     <view class="stats">
-      <view class="panel stat"><text class="num g">47</text><text class="label">已用题量</text></view>
-      <view class="panel stat"><text class="num o">53</text><text class="label">剩余次数</text></view>
+      <view class="panel stat"><text class="num g">{{user.usedCount}}</text><text class="label">已用题量</text></view>
+      <view class="panel stat"><text class="num o">{{user.remainingCount}}</text><text class="label">剩余次数</text></view>
     </view>
 
     <view class="buy"><text class="buy-title">购买题包</text><text class="buy-sub">100次 / 月 · 限时优惠</text></view>

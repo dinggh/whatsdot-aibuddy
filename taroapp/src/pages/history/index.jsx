@@ -1,7 +1,9 @@
 import React from 'react'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
+import Taro, { useDidShow } from '@tarojs/taro'
 
 import { BottomTabBar, StatusBar } from '@/components/layout'
+import { fetchHistory } from '@/services/api'
 import '@/styles/common.scss'
 import './index.scss'
 import img1 from '@/assets/generated-1771139016204.png'
@@ -9,6 +11,27 @@ import img2 from '@/assets/generated-1771138856711.png'
 import img3 from '@/assets/generated-1771138893602.png'
 
 const h = React.createElement
+
+const fallbackImages = [img1, img2, img3]
+
+function formatTime(input) {
+  const d = input ? new Date(input) : new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`
+}
+
+function normalizeItems(items) {
+  return (items || []).map((it, idx) => ({
+    id: it.id || idx,
+    title: it.title || '题目',
+    sub: `${it.grade || '-'} · ${formatTime(it.solvedAt)}`,
+    src: fallbackImages[idx % fallbackImages.length]
+  }))
+}
 
 function Item(props) {
   return h(View, { className: 'panel history-item' },
@@ -22,6 +45,19 @@ function Item(props) {
 }
 
 export default function HistoryPage() {
+  const [items, setItems] = React.useState([])
+  const [loading, setLoading] = React.useState(false)
+
+  useDidShow(() => {
+    setLoading(true)
+    fetchHistory()
+      .then((list) => setItems(normalizeItems(list)))
+      .catch((err) => {
+        Taro.showToast({ title: err.message || '加载失败', icon: 'none' })
+      })
+      .finally(() => setLoading(false))
+  })
+
   return h(View, { className: 'screen' },
     h(StatusBar),
     h(View, { className: 'history-header' },
@@ -29,12 +65,9 @@ export default function HistoryPage() {
       h(Text, { className: 'history-search' }, '⌕')
     ),
     h(ScrollView, { className: 'history-list', scrollY: true },
-      h(Text, { className: 'history-date' }, '今天'),
-      h(Item, { src: img1, title: '24 x 15 = ?', sub: '三年级 · 今天19:50' }),
-      h(Item, { src: img2, title: '阅读理解：小蝌蚪找妈妈', sub: '四年级 · 今天18:15' }),
-      h(Text, { className: 'history-date' }, '昨天'),
-      h(Item, { src: img3, title: '长方形面积计算', sub: '三年级 · 昨天20:10' }),
-      h(Item, { src: img1, title: '比喻句仿写', sub: '五年级 · 昨天19:45' })
+      loading ? h(Text, { className: 'history-date' }, '加载中...') : null,
+      items.map((item) => h(Item, { key: item.id, src: item.src, title: item.title, sub: item.sub })),
+      !loading && items.length === 0 ? h(Text, { className: 'history-date' }, '暂无记录') : null
     ),
     h(BottomTabBar, { active: 'history' })
   )

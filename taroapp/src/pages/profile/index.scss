@@ -1,8 +1,11 @@
 .profile-content { flex: 1; padding: 0 20px; display: flex; flex-direction: column; gap: 16px; }
 .profile-user { margin-top: 16px; display: flex; align-items: center; gap: 14px; }
 .profile-avatar { width: 56px; height: 56px; border-radius: 28px; background: #e8f5ed; color: #4a9b6e; text-align: center; line-height: 56px; }
+.profile-avatar-image { overflow: hidden; }
 .profile-name { display: block; color: #2d2a26; font-size: 20px; font-weight: 600; }
 .profile-child { display: block; margin-top: 4px; color: #6d6a65; font-size: 14px; }
+.profile-actions { display: flex; gap: 10px; }
+.profile-auth-btn { flex: 1; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #2d2a26; }
 .profile-stats { display: flex; gap: 12px; }
 .profile-stat { flex: 1; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .profile-num { font-size: 28px; font-weight: 700; }

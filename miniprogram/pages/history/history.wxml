@@ -3,22 +3,18 @@
   <view class="header"><text class="title">历史记录</text><text class="search">⌕</text></view>
 
   <scroll-view class="list" scroll-y="true">
-    <text class="date">今天</text>
-    <view class="panel item">
-      <image src="/images/generated-1771139016204.png" class="thumb" mode="aspectFill" />
-      <view class="meta"><text class="t">24 x 15 = ?</text><text class="s">三年级 · 今天19:50</text></view>
-      <text class="arrow">›</text>
-    </view>
-
-    <view class="panel item">
-      <image src="/images/generated-1771138856711.png" class="thumb" mode="aspectFill" />
-      <view class="meta"><text class="t">阅读理解：小蝌蚪找妈妈</text><text class="s">四年级 · 今天18:15</text></view>
-      <text class="arrow">›</text>
-    </view>
-
-    <text class="date">昨天</text>
-    <view class="panel item"><image src="/images/generated-1771138893602.png" class="thumb" mode="aspectFill" /><view class="meta"><text class="t">长方形面积计算</text><text class="s">三年级 · 昨天20:10</text></view><text class="arrow">›</text></view>
-    <view class="panel item"><image src="/images/generated-1771139016204.png" class="thumb" mode="aspectFill" /><view class="meta"><text class="t">比喻句仿写</text><text class="s">五年级 · 昨天19:45</text></view><text class="arrow">›</text></view>
+    <view wx:if="{{loading}}" class="date">加载中...</view>
+    <block wx:for="{{items}}" wx:key="id">
+      <view class="panel item">
+        <image src="{{item.thumbUrl}}" class="thumb" mode="aspectFill" />
+        <view class="meta">
+          <text class="t">{{item.title}}</text>
+          <text class="s">{{item.grade}} · {{item.displayTime}}</text>
+        </view>
+        <text class="arrow">›</text>
+      </view>
+    </block>
+    <view wx:if="{{!loading && items.length === 0}}" class="date">暂无记录</view>
   </scroll-view>
 
   <view class="tabbar">
