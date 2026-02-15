@@ -57,7 +57,7 @@ INSERT INTO users (openid, unionid)
 VALUES ($1, $2)
 ON CONFLICT (openid)
 DO UPDATE SET unionid = COALESCE(EXCLUDED.unionid, users.unionid), updated_at = now()
-RETURNING id, openid, unionid, nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at`
+RETURNING id, openid, COALESCE(unionid, ''), nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at`
 
 	var u User
 	err := s.DB.QueryRow(ctx, q, openID, nullable(unionID)).Scan(
@@ -76,7 +76,7 @@ RETURNING id, openid, unionid, nick_name, avatar_url, COALESCE(phone_number, '')
 
 func (s *Store) GetUserByID(ctx context.Context, id int64) (User, error) {
 	const q = `
-SELECT id, openid, unionid, nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at
+SELECT id, openid, COALESCE(unionid, ''), nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at
 FROM users WHERE id = $1`
 	var u User
 	err := s.DB.QueryRow(ctx, q, id).Scan(
@@ -94,7 +94,7 @@ func (s *Store) UpdateUserProfile(ctx context.Context, id int64, nickName, avata
 UPDATE users
 SET nick_name = $2, avatar_url = $3, updated_at = now()
 WHERE id = $1
-RETURNING id, openid, unionid, nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at`
+RETURNING id, openid, COALESCE(unionid, ''), nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at`
 	var u User
 	err := s.DB.QueryRow(ctx, q, id, nickName, avatarURL).Scan(
 		&u.ID, &u.OpenID, &u.UnionID, &u.NickName, &u.AvatarURL,
@@ -111,7 +111,7 @@ func (s *Store) UpdateUserPhone(ctx context.Context, id int64, phone string) (Us
 UPDATE users
 SET phone_number = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, openid, unionid, nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at`
+RETURNING id, openid, COALESCE(unionid, ''), nick_name, avatar_url, COALESCE(phone_number, ''), used_count, remaining_count, created_at, updated_at`
 	var u User
 	err := s.DB.QueryRow(ctx, q, id, phone).Scan(
 		&u.ID, &u.OpenID, &u.UnionID, &u.NickName, &u.AvatarURL,

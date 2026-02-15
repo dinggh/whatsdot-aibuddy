@@ -14,11 +14,13 @@
 
 ## 启动前准备
 1. PostgreSQL 创建数据库，例如 `aibuddy`
-2. 执行初始化 SQL:
+2. 配置环境变量（参考 `.env.example`），确保 `.env` 中 `DATABASE_URL` 正确
+3. 执行初始化 SQL（从 `.env` 读取数据库配置）:
    ```bash
-   psql "$DATABASE_URL" -f migrations/001_init.sql
+   cd backend
+   go run ./cmd/migrate
    ```
-3. 配置环境变量（参考 `.env.example`）
+   或指定 SQL 文件: `go run ./cmd/migrate migrations/001_init.sql`
 
 ## 运行
 ```bash
