@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bufio"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -17,6 +19,7 @@ type Config struct {
 }
 
 func Load() Config {
+	loadEnvFile(".env")
 	expireHours := getEnvInt("JWT_EXPIRE_HOURS", 168)
 	cfg := Config{
 		ServerAddr:     getEnv("SERVER_ADDR", ":8080"),
@@ -47,4 +50,34 @@ func getEnvInt(key string, defaultVal int) int {
 		return defaultVal
 	}
 	return n
+}
+
+// loadEnvFile reads a .env file and sets variables into os.Environ.
+// It skips empty lines and lines starting with #. File not found is ignored.
+func loadEnvFile(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		idx := strings.Index(line, "=")
+		if idx < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:idx])
+		val := strings.TrimSpace(line[idx+1:])
+		if key == "" {
+			continue
+		}
+		if len(val) >= 2 && ((val[0] == '"' && val[len(val)-1] == '"') || (val[0] == '\'' && val[len(val)-1] == '\'')) {
+			val = val[1 : len(val)-1]
+		}
+		os.Setenv(key, val)
+	}
 }

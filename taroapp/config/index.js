@@ -26,7 +26,9 @@ module.exports = defineConfig({
       enable: false
     }
   },
-  defineConstants: {},
+  defineConstants: {
+    'process.env.TARO_APP_API_BASE': JSON.stringify(process.env.TARO_APP_API_BASE || 'http://127.0.0.1:8080')
+  },
   copy: {
     patterns: [],
     options: {}
