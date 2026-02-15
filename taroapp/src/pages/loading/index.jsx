@@ -8,6 +8,7 @@ import '@/styles/common.scss'
 import './index.scss'
 
 const h = React.createElement
+const MIN_LOADING_MS = 1200
 
 export default function LoadingPage() {
   const [preview, setPreview] = React.useState('')
@@ -15,19 +16,23 @@ export default function LoadingPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState('')
 
-  const submit = (path, selectedMode) => {
+  const submit = async (path, selectedMode) => {
+    const startedAt = Date.now()
     setLoading(true)
     setError('')
-    uploadHomework(path, selectedMode)
-      .then((data) => {
-        const id = data && data.record && data.record.id
-        if (!id) throw new Error('后端未返回记录ID')
-        Taro.redirectTo({ url: `/pages/result/index?id=${id}` })
-      })
-      .catch((err) => {
-        setError(err.message || '上传失败')
-      })
-      .finally(() => setLoading(false))
+    try {
+      const data = await uploadHomework(path, selectedMode)
+      const id = data && data.record && data.record.id
+      if (!id) throw new Error('后端未返回记录ID')
+      const waitMs = Math.max(0, MIN_LOADING_MS - (Date.now() - startedAt))
+      if (waitMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, waitMs))
+      }
+      Taro.redirectTo({ url: `/pages/result/index?id=${id}` })
+    } catch (err) {
+      setError((err && err.message) || '上传失败')
+      setLoading(false)
+    }
   }
 
   useLoad((query) => {
