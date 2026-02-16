@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"mime"
+	"net/url"
 	"strings"
 	"time"
 
@@ -56,11 +58,14 @@ func (c *Client) AnalyzeHomework(ctx context.Context, imageBytes []byte, content
 		mediaType = "image/jpeg"
 	}
 	imageDataURL := "data:" + mediaType + ";base64," + base64.StdEncoding.EncodeToString(imageBytes)
+	prompt := modePrompt(mode)
+	log.Printf("[OPENAI_REQ] endpoint=%s domain=%s model=%s mode=%s content_type=%s image_bytes=%d prompt=%q",
+		c.BaseURL, extractDomain(c.BaseURL), c.Model, mode, mediaType, len(imageBytes), prompt)
 
 	messages := []oosdk.ChatCompletionMessageParamUnion{
 		oosdk.SystemMessage(systemPrompt()),
 		oosdk.UserMessage([]oosdk.ChatCompletionContentPartUnionParam{
-			oosdk.TextContentPart(modePrompt(mode)),
+			oosdk.TextContentPart(prompt),
 			oosdk.ImageContentPart(oosdk.ChatCompletionContentPartImageImageURLParam{URL: imageDataURL, Detail: "high"}),
 		}),
 	}
@@ -81,8 +86,12 @@ func (c *Client) AnalyzeHomework(ctx context.Context, imageBytes []byte, content
 		Temperature: oosdk.Float(0.2),
 	})
 	if err != nil {
+		log.Printf("[OPENAI_ERR] endpoint=%s domain=%s model=%s mode=%s err=%v",
+			c.BaseURL, extractDomain(c.BaseURL), c.Model, mode, err)
 		return AnalyzeResult{}, fmt.Errorf("chat completion failed: %w", err)
 	}
+	log.Printf("[OPENAI_RESP] request_id=%s model=%s prompt_tokens=%d completion_tokens=%d total_tokens=%d",
+		resp.ID, resp.Model, resp.Usage.PromptTokens, resp.Usage.CompletionTokens, resp.Usage.TotalTokens)
 	if len(resp.Choices) == 0 {
 		return AnalyzeResult{}, errors.New("empty choices")
 	}
@@ -97,6 +106,14 @@ func (c *Client) AnalyzeHomework(ctx context.Context, imageBytes []byte, content
 		return AnalyzeResult{}, fmt.Errorf("invalid completion json: %w", err)
 	}
 	return normalize(out), nil
+}
+
+func extractDomain(rawBaseURL string) string {
+	u, err := url.Parse(strings.TrimSpace(rawBaseURL))
+	if err != nil || u.Host == "" {
+		return rawBaseURL
+	}
+	return u.Host
 }
 
 func normalize(input AnalyzeResult) AnalyzeResult {
